@@ -11,9 +11,11 @@ import (
 )
 
 const surl = ":8088"
+const wdurl = "/INC%s/work-details/"
 
 var currentInc int = 2345
 var currentWLG int = 6745
+var createdinc map[string]bool = make(map[string]bool)
 
 func nonServe(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<p><h1>No server at /</h1>")
@@ -21,11 +23,12 @@ func nonServe(w http.ResponseWriter, r *http.Request) {
 
 func incidents(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
-	fmt.Printf("Incident:\n  Incoming Headers: \n%+v\n", r.Header)
-	fmt.Printf("   Incoming Body: \n%s\n", reqBody)
+	fmt.Printf("Incident:\n  >Incoming Headers: \n%+v\n", r.Header)
+	fmt.Printf("  -- Incoming Body: \n%s\n", reqBody)
 
 	xid := fmt.Sprintf("INC000000%d", currentInc)
 	currentInc++
+	createdinc[xid] = true
 
 	locstr := fmt.Sprintf("/enterprise/service-management/v1/incidents/%s", xid)
 	respuid := r.Header["Content-Tracking-Id"]
@@ -45,14 +48,24 @@ func workdetails(w http.ResponseWriter, r *http.Request) {
 	uvars := mux.Vars(r)
 
 	reqBody, _ := ioutil.ReadAll(r.Body)
-	fmt.Printf("Work Details:\n   Incoming Headers: \n%+v", r.Header)
-	fmt.Printf("\n   Work details Vars: \n%+v\n", uvars)
-	fmt.Printf("   Work details Body: \n%s\n", reqBody)
+	fmt.Printf("Work Details:\n   >Incoming Headers: \n%+v", r.Header)
+	fmt.Printf("\n   Work details Vars in URL: \n%+v\n", uvars)
+	fmt.Printf("   -- Work details Body: %s\n", reqBody)
 
-	xid := fmt.Sprintf("WLG000000%d", currentWLG)
+	// confirm if we already have an incident of this value
+	incv := "INC" + uvars["inc"]
+	if _, k := createdinc[incv]; !k {
+		log.Printf("********************************************")
+		log.Printf("No INC found in our map: %s", incv)
+		log.Printf("********************************************")
+	}
+
+	//
+	xid := fmt.Sprintf("000000%d", currentWLG)
 	currentWLG++
 
-	locstr := fmt.Sprintf("/enterprise/service-management/v1/incidents/INCxyz/work-details/%s", xid)
+	//locstr := fmt.Sprintf("/enterprise/service-management/v1/incidents/INCxyz/work-details/%s", xid)
+	locstr := fmt.Sprintf(wdurl, xid)
 	respuid := r.Header["Content-Tracking-Id"]
 	xrid := time.Now().String() + "_" + respuid[0][5:16]
 
